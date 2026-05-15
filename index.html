@@ -1,16 +1,178 @@
-<html lang="en">
+<!DOCTYPE html>
+<html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>Mario Kaboom.js</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Super Brian Bros</title>
     <style>
-      body {
+      * {
         margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        background: #000;
         overflow: hidden;
+        font-family: 'Courier New', monospace;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: none;
+      }
+      canvas {
+        display: block;
+      }
+
+      /* Mobile controls — only visible on touch devices */
+      #mobile-controls {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        pointer-events: none;
+      }
+      .pad-left, .pad-right {
+        position: absolute;
+        bottom: 20px;
+        display: flex;
+        gap: 10px;
+        pointer-events: auto;
+      }
+      .pad-left { left: 15px; }
+      .pad-right { right: 15px; }
+      .btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.25);
+        border: 3px solid rgba(255, 255, 255, 0.5);
+        color: #fff;
+        font-size: 24px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .btn:active {
+        background: rgba(255, 255, 255, 0.5);
+        transform: scale(0.92);
+      }
+      .btn-action {
+        background: rgba(220, 40, 40, 0.45);
+        border-color: rgba(255, 100, 100, 0.7);
+      }
+      .btn-jump {
+        width: 75px;
+        height: 75px;
+        font-size: 28px;
+      }
+
+      /* Show on touch devices */
+      @media (hover: none) and (pointer: coarse) {
+        #mobile-controls { display: block; }
       }
     </style>
   </head>
   <body>
     <script src="https://kaboomjs.com/lib/0.5.0/kaboom.js"></script>
     <script src="game.js"></script>
+
+    <div id="mobile-controls">
+      <div class="pad-left">
+        <div class="btn" id="btn-left">◀</div>
+        <div class="btn" id="btn-right">▶</div>
+      </div>
+      <div class="pad-right">
+        <div class="btn btn-jump btn-action" id="btn-jump">▲</div>
+      </div>
+    </div>
+
+    <script>
+      // Conectar botones táctiles a eventos de teclado simulados.
+      function fireKey(type, key) {
+        const code = key === 'left' ? 'ArrowLeft'
+                   : key === 'right' ? 'ArrowRight'
+                   : key === 'up' ? 'ArrowUp'
+                   : key === 'down' ? 'ArrowDown'
+                   : 'Space';
+        const keyName = key === 'space' ? ' '
+                      : key === 'left' ? 'ArrowLeft'
+                      : key === 'right' ? 'ArrowRight'
+                      : key === 'up' ? 'ArrowUp'
+                      : 'ArrowDown';
+        const ev = new KeyboardEvent(type, {
+          key: keyName,
+          code: code,
+          keyCode: code === 'ArrowLeft' ? 37
+                 : code === 'ArrowUp' ? 38
+                 : code === 'ArrowRight' ? 39
+                 : code === 'ArrowDown' ? 40
+                 : 32,
+          which: code === 'ArrowLeft' ? 37
+               : code === 'ArrowUp' ? 38
+               : code === 'ArrowRight' ? 39
+               : code === 'ArrowDown' ? 40
+               : 32,
+          bubbles: true,
+          cancelable: true,
+        });
+        // Disparamos en todos los targets posibles donde Kaboom pueda escuchar
+        window.dispatchEvent(ev);
+        document.dispatchEvent(ev);
+        const canvas = document.querySelector('canvas');
+        if (canvas) canvas.dispatchEvent(ev);
+      }
+
+      function bindHold(btnId, key) {
+        const btn = document.getElementById(btnId);
+        let pressed = false;
+        const start = (e) => {
+          e.preventDefault();
+          if (pressed) return;
+          pressed = true;
+          fireKey('keydown', key);
+        };
+        const end = (e) => {
+          e.preventDefault();
+          if (!pressed) return;
+          pressed = false;
+          fireKey('keyup', key);
+        };
+        btn.addEventListener('touchstart', start, { passive: false });
+        btn.addEventListener('touchend', end, { passive: false });
+        btn.addEventListener('touchcancel', end, { passive: false });
+        btn.addEventListener('mousedown', start);
+        btn.addEventListener('mouseup', end);
+        btn.addEventListener('mouseleave', end);
+      }
+
+      function bindTap(btnId, key) {
+        const btn = document.getElementById(btnId);
+        const tap = (e) => {
+          e.preventDefault();
+          fireKey('keydown', key);
+          setTimeout(() => fireKey('keyup', key), 80);
+        };
+        btn.addEventListener('touchstart', tap, { passive: false });
+        btn.addEventListener('mousedown', tap);
+      }
+
+      // Esperamos que el canvas esté listo antes de bindear
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          bindHold('btn-left', 'left');
+          bindHold('btn-right', 'right');
+          bindTap('btn-jump', 'space');
+        }, 500);
+      });
+    </script>
   </body>
 </html>
